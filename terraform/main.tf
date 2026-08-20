@@ -5,10 +5,6 @@ terraform {
       source  = "digitalocean/digitalocean"
       version = "~> 2.34"
     }
-    cloudinit = {
-      source  = "hashicorp/cloudinit"
-      version = "~> 2.3"
-    }
   }
 }
 
@@ -23,26 +19,18 @@ resource "digitalocean_ssh_key" "honeypot_key" {
 }
 
 # Cloud-init handles first-boot hardening (Phase 2) so the box never has an
-# open window with default sshd config before we can lock it down.
-data "cloudinit_config" "honeypot_init" {
-  gzip          = false
-  base64_encode = false
-
-  part {
-    content_type = "text/cloud-config"
-    content      = templatefile("${path.module}/cloud-init.yml.tpl", {
-      admin_ssh_port = var.admin_ssh_port
-    })
-  }
-}
-
+# open window with default sshd config before we can lock it down. A single
+# text/cloud-config document doesn't need the hashicorp/cloudinit provider's
+# MIME-multipart machinery -- the builtin templatefile() is enough.
 resource "digitalocean_droplet" "honeypot" {
-  image    = "ubuntu-22-04-x64"
-  name     = var.droplet_name
-  region   = var.region
-  size     = var.droplet_size
+  image  = "ubuntu-22-04-x64"
+  name   = var.droplet_name
+  region = var.region
+  size   = var.droplet_size
   ssh_keys = [digitalocean_ssh_key.honeypot_key.fingerprint]
-  user_data = data.cloudinit_config.honeypot_init.rendered
+  user_data = templatefile("${path.module}/cloud-init.yml.tpl", {
+    admin_ssh_port = var.admin_ssh_port
+  })
 
   tags = ["honeypot", "threat-intel"]
 }
