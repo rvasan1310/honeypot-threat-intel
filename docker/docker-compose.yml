@@ -1,6 +1,5 @@
 services:
-  # CI/CD smoke test (Phase 4, retry): confirms redeploy works end-to-end
-  # after fixing the VPS_DEPLOY_SSH_KEY secret formatting.
+  # CI/CD smoke test (Phase 4, retry 2): confirms redeploy works end-to-end.
   cowrie:
     image: cowrie/cowrie:latest
     container_name: cowrie
