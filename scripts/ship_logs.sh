@@ -26,7 +26,11 @@ git checkout -B "$LOGS_BRANCH" "origin/$LOGS_BRANCH" 2>/dev/null || git checkout
 mkdir -p "raw/${DATE_TAG}"
 cp "$LOG_SRC" "raw/${DATE_TAG}/cowrie.json"
 
-git add "raw/${DATE_TAG}/cowrie.json"
+
+# -f: raw/ is gitignored so `main` never accidentally picks up a locally
+# pulled-down analysis copy, but the logs branch is precisely where these
+# snapshots are meant to live.
+git add -f "raw/${DATE_TAG}/cowrie.json"
 if ! git diff --cached --quiet; then
   git -c user.name="honeypot-bot" -c user.email="honeypot-bot@localhost" \
     commit -m "logs: ${DATE_TAG} snapshot"
