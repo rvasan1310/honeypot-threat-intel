@@ -21,7 +21,7 @@ systemctl restart ssh
 
 echo "==> Installing unattended-upgrades, fail2ban, ufw, docker"
 apt-get update -y
-apt-get install -y ufw unattended-upgrades fail2ban docker.io docker-compose-plugin
+apt-get install -y ufw unattended-upgrades fail2ban docker.io docker-compose-v2
 
 cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
 APT::Periodic::Update-Package-Lists "1";

@@ -16,7 +16,9 @@ services:
     environment:
       - COWRIE_HONEYPOT_HOSTNAME=srv-prod-04
     healthcheck:
-      test: ["CMD", "pgrep", "-f", "cowrie"]
+      # The cowrie/cowrie image has no shell or pgrep -- it's just the venv's
+      # python3 entrypoint -- so probe the SSH listener directly instead.
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('127.0.0.1', 2222), 2)"]
       interval: 60s
       timeout: 10s
       retries: 3

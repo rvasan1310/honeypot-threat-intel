@@ -10,7 +10,7 @@ packages:
   - unattended-upgrades
   - fail2ban
   - docker.io
-  - docker-compose-plugin
+  - docker-compose-v2
 
 write_files:
   - path: /etc/ssh/sshd_config.d/99-honeypot-hardening.conf
