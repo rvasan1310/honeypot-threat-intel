@@ -34,15 +34,13 @@ exposing a port to the internet isn't something to do on autopilot.
    ```
 3. Push this repo to GitHub as `honeypot-threat-intel` (private is fine
    while iterating, make it public before you link it in the report).
-4. Note your home/admin IP (`curl ifconfig.me`) for `admin_ip_cidr` — if
-   it's dynamic, use `0.0.0.0/0` for now and tighten later.
 
 ## Phase 1 — Provision with Terraform (you run this)
 
 ```bash
 cd terraform
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars: do_token, admin_ip_cidr, ssh_public_key_path
+# edit terraform.tfvars: do_token, ssh_public_key_path
 terraform init
 terraform plan
 terraform apply
@@ -114,6 +112,12 @@ ssh -i ~/.ssh/honeypot_project -p <admin_ssh_port> root@<droplet_ip> \
 ```
 
 ## Phase 4 — CI/CD (you configure the secrets, once)
+
+The admin SSH port (`admin_ssh_port`) is open to `0.0.0.0/0` in the
+firewall, not scoped to a single IP — GitHub's hosted runners connect from
+GitHub's own dynamic IP ranges, which aren't practical to allowlist.
+Security here rests on key-only auth (`PasswordAuthentication no`),
+`fail2ban`, and a non-default port, not on restricting the source IP.
 
 In the GitHub repo: **Settings → Secrets and variables → Actions**, add:
 

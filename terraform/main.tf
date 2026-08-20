@@ -33,6 +33,14 @@ resource "digitalocean_droplet" "honeypot" {
   })
 
   tags = ["honeypot", "threat-intel"]
+
+  # user_data only runs once, at first boot, and DigitalOcean can't update it
+  # in-place -- any diff here forces a full destroy+recreate (new droplet,
+  # new IP). Once the box is up, editing cloud-init.yml.tpl should affect the
+  # *next* droplet this config creates, not force-replace the current one.
+  lifecycle {
+    ignore_changes = [user_data]
+  }
 }
 
 # Firewall managed as code -- this is the point of the exercise.
@@ -41,10 +49,15 @@ resource "digitalocean_firewall" "honeypot_fw" {
   name        = "honeypot-firewall"
   droplet_ids = [digitalocean_droplet.honeypot.id]
 
+  # Open to the internet rather than scoped to admin_ip_cidr: GitHub Actions'
+  # hosted runners (Phase 4 CI/CD redeploy) connect from GitHub's own dynamic
+  # IP ranges, not admin_ip_cidr, and those ranges aren't practical to
+  # allowlist. Security here rests on key-only auth (PasswordAuthentication
+  # no), fail2ban, and a non-default port -- not on hiding the port.
   inbound_rule {
     protocol         = "tcp"
     port_range       = var.admin_ssh_port
-    source_addresses = [var.admin_ip_cidr]
+    source_addresses = ["0.0.0.0/0", "::/0"]
   }
 
   inbound_rule {

@@ -16,11 +16,6 @@ variable "admin_ssh_port" {
   default     = 2201
 }
 
-variable "admin_ip_cidr" {
-  description = "Your home/admin IP in CIDR form (e.g. 203.0.113.5/32). Restricts real SSH access. Use 0.0.0.0/0 only temporarily if your IP is dynamic, then tighten it."
-  type        = string
-}
-
 variable "region" {
   description = "DigitalOcean region slug."
   type        = string

@@ -4,7 +4,6 @@
 do_token             = "REPLACE_WITH_YOUR_DIGITALOCEAN_TOKEN"
 ssh_public_key_path  = "~/.ssh/honeypot_project.pub"
 admin_ssh_port       = 2201
-admin_ip_cidr        = "203.0.113.5/32"   # your home IP; use 0.0.0.0/0 temporarily if dynamic
 region               = "nyc3"
 droplet_size         = "s-1vcpu-1gb"
 droplet_name         = "honeypot-01"
