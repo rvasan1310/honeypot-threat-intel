@@ -1,5 +1,4 @@
 services:
-  # CI/CD smoke test (Phase 4, retry 2): confirms redeploy works end-to-end.
   cowrie:
     image: cowrie/cowrie:latest
     container_name: cowrie
