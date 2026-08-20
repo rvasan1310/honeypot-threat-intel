@@ -1,0 +1,30 @@
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+terraform/*.tfplan
+terraform/.terraform.lock.hcl
+
+# SSH keys - never commit these, even accidentally
+*.pem
+honeypot_project
+honeypot_project.pub
+
+# GeoIP database (download separately, don't commit MaxMind's licensed data)
+*.mmdb
+
+# Raw logs / analysis output - keep the repo history clean, ship logs to the
+# dedicated `logs` branch instead (see scripts/ship_logs.sh)
+analysis/raw/
+analysis/output/
+raw/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS cruft
+.DS_Store
+Thumbs.db

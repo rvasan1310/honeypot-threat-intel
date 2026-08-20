@@ -1,0 +1,12 @@
+# Cowrie auth rules: username:uid:password
+#   *        matches ANY password
+#   !value   explicitly DENIES that one password (evaluated before *)
+#
+# root/root is denied so the single most obvious combo doesn't trivially
+# "work" on every scanner (which would look suspicious in the data), but
+# root with any OTHER password succeeds -- this is deliberate: letting
+# brute-forced logins "succeed" is what gets us post-auth command data
+# (malware staging, recon, etc.) instead of just a wall of failed attempts.
+root:x:!root
+root:x:*
+admin:x:*

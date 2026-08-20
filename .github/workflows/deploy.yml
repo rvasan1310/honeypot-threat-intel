@@ -1,0 +1,31 @@
+name: Deploy Honeypot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docker/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Redeploy Cowrie on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_ADMIN_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/honeypot/repo
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            cd docker
+            docker compose down
+            docker compose up -d --build
+            docker compose ps

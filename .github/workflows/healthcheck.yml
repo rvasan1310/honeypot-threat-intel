@@ -1,0 +1,42 @@
+name: Honeypot Healthcheck
+
+# Automates the Phase 6 "spot-check once a day" step. A failing job means
+# the container is down or the log file stopped growing -- GitHub will
+# email you, so you don't have to remember to check manually.
+on:
+  schedule:
+    - cron: "0 9 * * *" # 09:00 UTC daily
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check container is up and logs are growing
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_ADMIN_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd /opt/honeypot/repo/docker
+            docker compose ps --status running | grep -q cowrie
+
+            LOG=/opt/honeypot/logs/cowrie.json
+            if [ ! -s "$LOG" ]; then
+              echo "cowrie.json is empty or missing"
+              exit 1
+            fi
+
+            # Fail if the log file hasn't been modified in the last 48h
+            # (allows for a quiet night, but catches a stalled container).
+            LAST_MOD=$(date -d "$(stat -c %y "$LOG")" +%s)
+            NOW=$(date +%s)
+            AGE=$(( (NOW - LAST_MOD) / 3600 ))
+            echo "cowrie.json last written ${AGE}h ago"
+            if [ "$AGE" -gt 48 ]; then
+              echo "Log file stale for over 48h"
+              exit 1
+            fi

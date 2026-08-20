@@ -1,0 +1,38 @@
+services:
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: cowrie
+    restart: unless-stopped
+    ports:
+      # Host 22 -> container 2222: Cowrie is the first thing anyone hitting
+      # port 22 sees. Host 23 -> container 2223 for telnet.
+      - "22:2222"
+      - "23:2223"
+    volumes:
+      - ./cowrie/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
+      - ./cowrie/userdb.txt:/cowrie/cowrie-git/etc/userdb.txt:ro
+      - cowrie_logs:/cowrie/cowrie-git/var/log/cowrie
+      - cowrie_downloads:/cowrie/cowrie-git/var/lib/cowrie/downloads
+    environment:
+      - COWRIE_HONEYPOT_HOSTNAME=srv-prod-04
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "cowrie"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  cowrie_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      # Bind straight to a host path so a nightly cron/Action can ship
+      # cowrie.json off-box even if the container is compromised.
+      device: /opt/honeypot/logs
+  cowrie_downloads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/honeypot/downloads
