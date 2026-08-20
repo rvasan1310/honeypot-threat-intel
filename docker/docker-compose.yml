@@ -1,4 +1,6 @@
 services:
+  # CI/CD smoke test (Phase 4): this comment exists only to trigger
+  # deploy.yml's path filter and confirm redeploy works end-to-end.
   cowrie:
     image: cowrie/cowrie:latest
     container_name: cowrie
