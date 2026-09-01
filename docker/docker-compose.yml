@@ -11,10 +11,6 @@ services:
     volumes:
       - ./cowrie/cowrie.cfg:/cowrie/cowrie-git/etc/cowrie.cfg:ro
       - ./cowrie/userdb.txt:/cowrie/cowrie-git/etc/userdb.txt:ro
-      # The image ships with no honeyfs/ at all, so Cowrie's pwd.Passwd()
-      # sys.exit(2)s loading etc/passwd right after every successful login --
-      # killing the session before any post-auth commands get captured.
-      - ./cowrie/honeyfs:/cowrie/cowrie-git/honeyfs:ro
       - cowrie_logs:/cowrie/cowrie-git/var/log/cowrie
       - cowrie_downloads:/cowrie/cowrie-git/var/lib/cowrie/downloads
     environment:
