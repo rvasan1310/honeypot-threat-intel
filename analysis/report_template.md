@@ -1,6 +1,6 @@
-# I ran a real SSH/Telnet honeypot on the open internet for two weeks. Here's what attacked it.
+# I ran a real SSH/Telnet honeypot on the open internet for two months. Here's what attacked it.
 
-*Collection window: Aug 20 - Sep 3, 2026 (14 days, in two parts — see the
+*Collection window: Aug 20 - Oct 17, 2026 (59 days, in two parts — see the
 limitation below).*
 
 ## What I built
@@ -27,47 +27,61 @@ below is built from that fresh data.
 
 ## The numbers
 
-Pulled from `analysis/output/summary.json`, combining both parts of the
-window (Aug 20 - Sep 1 pre-fix, Sep 1 20:20 UTC - Sep 3 17:06 UTC post-fix):
+Pulled from `analysis/output/summary.json` plus a direct event-type count
+over the raw data, combining both parts of the window (Aug 20 - Sep 1
+pre-fix, Sep 1 20:20 UTC onward post-fix):
 
-- Total events logged: **187,701**
-- Total connection attempts: **36,669**
-- Unique sessions: **36,692**
-- Unique source IPs: **2,581**
-- Successful logins: **17,330**
-- Failed logins: **21,729**
-- Post-auth commands captured: **5,488** (all from the post-fix portion —
+- Total events logged: **1,189,208**
+- Total connection attempts: **111,906**
+- Unique sessions: **111,982**
+- Unique source IPs: **4,197** across **140 countries**
+- Successful logins: **35,595**
+- Failed logins: **61,147**
+- Post-auth commands captured: **353,671** (all from the post-fix portion —
   zero from Aug 20 - Sep 1, see limitation above)
-- File download attempts captured: **117** successful, **112** explicitly
-  failed/timed out (see Story 5)
+- File download attempts captured: **24,448** successful, **374** explicitly
+  failed/timed out
 - Top credential pairs tried: *(see chart)*
 
 ![Top credentials](../output/top_credentials.png)
 ![Connections per day](../output/connections_per_day.png)
 ![Command categories](../output/command_categories.png)
+![Top countries](../output/top_countries.png)
 
-*Country breakdown isn't included this round — it requires a MaxMind
-GeoLite2 DB and the `--geoip` flag isn't wired up yet.*
-
-The two most-tried pairs — `enable\x00`/`linuxshell\x00` (2,804 attempts)
-and `system\x00`/`shell\x00` (2,756 attempts) — dwarf everything else and
+The two most-tried pairs — `enable\x00`/`linuxshell\x00` (3,347 attempts)
+and `system\x00`/`shell\x00` (3,290 attempts) — dwarf everything else and
 carry trailing null bytes, a fingerprint of raw Telnet-negotiation scanner
 tools rather than manual attempts; this is almost certainly one or two
-automated botnet scanners hammering the telnet listener. Further down the
-list, `root/xc3511` (286) and `root/vizxv` (218) are the original Mirai
-botnet's hardcoded default-credential list for IP cameras and DVRs —
-nearly a decade old and still in active use by scanners today. The rest
-(`admin/admin`, `root/admin`, `support/support`, `root/123456`) are
-generic router/appliance default-credential guesses, consistent with
-broad, untargeted IoT credential stuffing rather than anything aimed at
-this host specifically.
+automated botnet scanners hammering the telnet listener. `root/toor`
+(1,455), `345gs5662d34/345gs5662d34` (1,386), and `root/3245gs5662d34`
+(1,309) are hardcoded, non-dictionary credential pairs associated with
+Chinese-manufactured DVR/NVR devices, widely reused across Mirai-derived
+scanner lists. Further down, `root/xc3511` (637) and `root/vizxv` (538)
+are the original Mirai botnet's hardcoded default-credential list for IP
+cameras and DVRs — nearly a decade old and still in active use by
+scanners today. `admin/admin` (1,985) and `root/admin` (605) round out
+the top 10 as generic router/appliance default-credential guesses,
+consistent with broad, untargeted IoT credential stuffing rather than
+anything aimed at this host specifically. The country breakdown — led by
+the United States (706 unique IPs), France (254), Indonesia (211), Brazil
+(194), and Russia (192) — spans 140 countries total, consistent with
+broad botnet scanning rather than a geographically targeted campaign.
 
-Of the 5,488 post-auth commands, **3,767 were the single command**
-`uname -a 2>/dev/null || echo 'Unknown'` — one hyperactive recon script
-alone accounts for over two-thirds of all command volume in the dataset.
-The categorized breakdown (`analysis/output/command_categories.png`)
-splits the rest into recon (3,888 total), malware-staging (137), and
-uncategorized (1,463) — no cryptominer command-line indicators
+Of the 353,671 post-auth commands, no single command dominates the way
+`uname -a` did in the first few hours post-fix — the top individual
+command is `/bin/busybox` (16,803, ~4.8% of volume), followed by the
+shell-fingerprint sequence (`enable`/`system`/`shell`/`sh`/`linuxshell`,
+~6-7k each) and `/bin/busybox chmod +x .d; ./.d; ./dvrHelper selfrep`
+(4,112) — a self-replicating dvrHelper-named payload also seen in Story 2.
+Notably, `cd ~; chattr -ia .ssh; lockr -ia .ssh` appears **1,419 times**:
+`chattr -i` and `-a` clear the Linux immutable/append-only flags on the
+`.ssh` directory, which is how IoT botnets lock in their own SSH key
+against being overwritten (by the device owner or a rival bot) — here
+it's being *cleared*, i.e. a bot either evicting a competitor's lock or
+refreshing its own. See the MITRE table below (T1098.004). The
+categorized breakdown (`analysis/output/command_categories.png`) splits
+the full set into recon (17,519), malware-staging (6,595), and
+uncategorized/other (329,557) — no cryptominer command-line indicators
 (`xmrig`, `stratum+tcp`, etc.) showed up in this window.
 
 ## Concrete stories
@@ -238,14 +252,15 @@ via shotgun-fetch) and **T1105** (Ingress Tool Transfer, attempted).
 
 | Behavior | Technique | Observed? |
 |---|---|---|
-| Password brute forcing | T1110 Brute Force | Yes — 21,729 failed attempts total + Story 3 |
-| Successful login w/ guessed creds | T1078 Valid Accounts | Yes — 17,330 total |
-| Commands run post-login | T1059 Command and Scripting Interpreter | Yes — 5,488 events, all post-fix |
-| Recon / device fingerprinting | T1082 / T1592 / T1595 | Yes — Stories 1, 3, 5; 3,888 recon-classified commands |
-| File download attempts (wget/tftp/ftpget/scp) | T1105 Ingress Tool Transfer | Yes — Stories 1, 2, 4, 5 (117 succeeded, 112 explicitly failed) |
+| Password brute forcing | T1110 Brute Force | Yes — 61,147 failed attempts total + Story 3 |
+| Successful login w/ guessed creds | T1078 Valid Accounts | Yes — 35,595 total |
+| Commands run post-login | T1059 Command and Scripting Interpreter | Yes — 353,671 events, all post-fix |
+| Recon / device fingerprinting | T1082 / T1592 / T1595 | Yes — Stories 1, 3, 5; 17,519 recon-classified commands |
+| File download attempts (wget/tftp/ftpget/scp) | T1105 Ingress Tool Transfer | Yes — Stories 1, 2, 4, 5 (24,448 succeeded, 374 explicitly failed) |
 | Malware carrying its own auth credential | T1552.004 Private Keys | Yes — Story 4 (embedded SSH key) |
+| Clearing filesystem locks on `.ssh` to plant/refresh a key | T1098.004 Account Manipulation: SSH Authorized Keys | Yes — `chattr -ia .ssh; lockr -ia .ssh`, 1,419 occurrences (see "The numbers") |
 | Possible rival-malware cleanup | T1070 Indicator Removal | Plausible — Story 2 |
-| Cryptominer indicators | T1496 Resource Hijacking | Not observed — no `xmrig`/`stratum` strings in 5,488 commands |
+| Cryptominer indicators | T1496 Resource Hijacking | Not observed — no `xmrig`/`stratum` strings in 353,671 commands |
 
 ## What I'd do differently / next steps
 
@@ -256,7 +271,8 @@ via shotgun-fetch) and **T1105** (Ingress Tool Transfer, attempted).
       done; cut short deliberately at ~2.5 days post-fix rather than the
       full week, since attacker behavior repeats fast (same credential
       lists, same botnet scripts) and returns were already diminishing
-- [ ] Wire up `--geoip` with a MaxMind GeoLite2 DB for the country breakdown
+- [x] Wire up `--geoip` with a MaxMind GeoLite2 DB for the country
+      breakdown — done; 140 countries across the 59-day window
 - [ ] Add a health check that catches "container up but every session
       dying pre-shell" — the Docker healthcheck only checked the port was
       listening, which stayed true throughout this entire bug
